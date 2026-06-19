@@ -1,0 +1,466 @@
+// Carretão — schema de dados (docs/05).
+// Convenções:
+//  - dinheiro em CENTAVOS (Int) para evitar erro de ponto flutuante;
+//  - percentual de comissão como Decimal (fração 0..1);
+//  - multi-tenant por `lojaId` (docs/02); cliente/mecânico são globais.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums (espelham @carretao/core) ─────────────
+
+enum Papel {
+  CLIENTE
+  MECANICO
+  LOJA_ADMIN
+  LOJA_OPERADOR
+  PLATAFORMA_ADMIN
+  PLATAFORMA_SUPORTE
+}
+
+enum StatusUsuario {
+  ATIVO
+  SUSPENSO
+  EXCLUIDO
+}
+
+enum StatusLoja {
+  PENDENTE
+  ATIVA
+  SUSPENSA
+}
+
+enum StatusVerificacao {
+  PENDENTE
+  APROVADO
+  REPROVADO
+}
+
+enum TipoEntrega {
+  RETIRADA
+  ENTREGA
+}
+
+enum MetodoPagamento {
+  NA_LOJA
+  ONLINE
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+  ESTORNADO
+}
+
+enum StatusPedido {
+  CRIADO
+  CONFIRMADO
+  EM_PREPARO
+  PRONTO
+  ENVIADO
+  CONCLUIDO
+  CANCELADO
+  DEVOLVIDO
+}
+
+enum StatusComissao {
+  PENDENTE
+  CONFIRMADA
+  A_PAGAR
+  PAGA
+  ESTORNADA
+}
+
+enum OrigemAtribuicao {
+  LINK
+  QR
+  CHECKOUT
+  PEDIDO_MECANICO
+}
+
+enum TipoMovimentoComissao {
+  CREDITO
+  DEBITO
+  ESTORNO
+  SAQUE
+}
+
+enum StatusSaque {
+  SOLICITADO
+  PROCESSANDO
+  PAGO
+  FALHOU
+}
+
+// ───────────────────────────── Conta / Usuário ─────────────────────────────
+
+model Usuario {
+  id        String        @id @default(uuid())
+  telefone  String        @unique // verificado por OTP (RN-001)
+  email     String?       @unique
+  nome      String
+  cpf       String? // cifrado em produção (RN-081); obrigatório p/ saque (RN-004)
+  status    StatusUsuario @default(ATIVO)
+  criadoEm  DateTime      @default(now())
+  atualizadoEm DateTime   @updatedAt
+
+  papeis         PapelUsuario[]
+  perfilMecanico PerfilMecanico?
+  membrosLoja    MembroLoja[]
+  enderecos      Endereco[]
+  pedidosCliente Pedido[]         @relation("PedidoCliente")
+  pedidosMecanico Pedido[]        @relation("PedidoMecanico")
+  avaliacoes     Avaliacao[]
+  atribuicoes    Atribuicao[]     @relation("AtribuicaoCliente")
+  termos         TermoAceite[]
+
+  @@map("usuario")
+}
+
+model PapelUsuario {
+  id        String  @id @default(uuid())
+  usuarioId String
+  papel     Papel
+  lojaId    String? // preenchido quando papel de loja (RP-03)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  loja    Loja?   @relation(fields: [lojaId], references: [id])
+
+  @@unique([usuarioId, papel, lojaId])
+  @@index([lojaId])
+  @@map("papel_usuario")
+}
+
+model Endereco {
+  id         String  @id @default(uuid())
+  usuarioId  String
+  apelido    String?
+  logradouro String
+  numero     String?
+  bairro     String?
+  cidade     String
+  uf         String
+  cep        String?
+  latitude   Float?
+  longitude  Float?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("endereco")
+}
+
+model TermoAceite {
+  id        String   @id @default(uuid())
+  usuarioId String
+  versao    String // versão do termo aceito (RN-005)
+  aceitoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("termo_aceite")
+}
+
+// ───────────────────────────── Mecânico (afiliado) ─────────────────────────
+
+model PerfilMecanico {
+  usuarioId         String            @id
+  statusVerificacao StatusVerificacao @default(PENDENTE) // RN-004
+  chavePix          String?
+  limiteMensalCentavos Int            @default(200000) // RN-A43 (R$ 2.000)
+  criadoEm          DateTime          @default(now())
+
+  usuario Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  codigos CodigoIndicacao[]
+  saques  Saque[]
+
+  @@map("perfil_mecanico")
+}
+
+model CodigoIndicacao {
+  id         String  @id @default(uuid())
+  mecanicoId String
+  codigo     String  @unique // ex.: BIGODE12
+  principal  Boolean @default(false)
+  ativo      Boolean @default(true)
+
+  mecanico PerfilMecanico @relation(fields: [mecanicoId], references: [usuarioId], onDelete: Cascade)
+
+  @@index([mecanicoId])
+  @@map("codigo_indicacao")
+}
+
+// ───────────────────────────── Loja (tenant) ───────────────────────────────
+
+model Loja {
+  id                       String     @id @default(uuid())
+  cnpj                     String     @unique
+  nomeFantasia             String
+  razaoSocial              String?
+  status                   StatusLoja @default(PENDENTE) // RN-003/014
+  logradouro               String?
+  cidade                   String
+  uf                       String
+  latitude                 Float?
+  longitude                Float?
+  horarioFuncionamento     Json? // RN-011
+  ofereceRetirada          Boolean    @default(true) // RN-012
+  ofereceEntrega           Boolean    @default(false)
+  taxaEntregaCentavos      Int?       @default(0) // RN-042
+  areaEntregaKm            Float?
+  comissaoPercentualPadrao Decimal    @default(0.05) @db.Decimal(5, 4) // RN-013
+  planoId                  String?
+  criadoEm                 DateTime   @default(now())
+
+  membros  MembroLoja[]
+  ofertas  Oferta[]
+  pedidos  Pedido[]
+  papeis   PapelUsuario[]
+  plano    Plano?         @relation(fields: [planoId], references: [id])
+
+  @@index([cidade, status])
+  @@map("loja")
+}
+
+model MembroLoja {
+  id        String @id @default(uuid())
+  lojaId    String
+  usuarioId String
+  papel     Papel // LOJA_ADMIN | LOJA_OPERADOR
+
+  loja    Loja    @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([lojaId, usuarioId])
+  @@index([usuarioId])
+  @@map("membro_loja")
+}
+
+model Plano {
+  id        String @id @default(uuid())
+  nome      String @unique // Grátis | Pro | Destaque (docs/06)
+  precoCentavos Int @default(0)
+  lojas     Loja[]
+
+  @@map("plano")
+}
+
+// ───────────────────────────── Catálogo ────────────────────────────────────
+
+model Produto {
+  id          String   @id @default(uuid())
+  titulo      String
+  categoria   String
+  marca       String?
+  partNumber  String? // código da peça (RN-020)
+  descricao   String?
+  criadoEm    DateTime @default(now())
+
+  aplicacoes Aplicacao[]
+  ofertas    Oferta[]
+
+  @@index([categoria])
+  @@index([partNumber])
+  @@map("produto")
+}
+
+// Compatibilidade com modelos de caminhão (RN-020).
+model Aplicacao {
+  id            String  @id @default(uuid())
+  produtoId     String
+  modeloCaminhao String
+  anoDe         Int?
+  anoAte        Int?
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@index([produtoId])
+  @@index([modeloCaminhao])
+  @@map("aplicacao")
+}
+
+// Oferta = a peça NAQUELA loja, com preço/estoque próprios (RN-021).
+model Oferta {
+  id                  String   @id @default(uuid())
+  lojaId              String
+  produtoId           String
+  precoCentavos       Int
+  precoPromoCentavos  Int?
+  promoValidade       DateTime?
+  estoqueQtd          Int      @default(0)
+  permiteSobConsulta  Boolean  @default(false) // RN-022
+  ativo               Boolean  @default(true)
+  atualizadoEm        DateTime @updatedAt
+
+  loja       Loja        @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+  produto    Produto     @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  itensPedido ItemPedido[]
+
+  @@unique([lojaId, produtoId])
+  @@index([produtoId])
+  @@map("oferta")
+}
+
+// ───────────────────────────── Pedido ──────────────────────────────────────
+
+model Pedido {
+  id                         String          @id @default(uuid())
+  lojaId                     String
+  clienteId                  String
+  mecanicoId                 String? // atribuição congelada (RN-A02)
+  comissaoPercentualSnapshot Decimal?        @db.Decimal(5, 4) // RN-036/A02
+  tipoEntrega                TipoEntrega
+  status                     StatusPedido    @default(CRIADO)
+  metodoPagamento            MetodoPagamento @default(NA_LOJA) // RN-045
+  valorItensCentavos         Int             @default(0)
+  valorFreteCentavos         Int             @default(0)
+  valorTotalCentavos         Int             @default(0)
+  codigoRetirada             String? // RN-040
+  criadoEm                   DateTime        @default(now())
+  concluidoEm                DateTime? // dispara janela de devolução (RN-A21)
+
+  loja     Loja         @relation(fields: [lojaId], references: [id])
+  cliente  Usuario      @relation("PedidoCliente", fields: [clienteId], references: [id])
+  mecanico Usuario?     @relation("PedidoMecanico", fields: [mecanicoId], references: [id])
+  itens    ItemPedido[]
+  comissao Comissao?
+  pagamento Pagamento?
+  avaliacao Avaliacao?
+
+  @@index([lojaId, status])
+  @@index([clienteId])
+  @@index([mecanicoId])
+  @@map("pedido")
+}
+
+model ItemPedido {
+  id             String @id @default(uuid())
+  pedidoId       String
+  ofertaId       String
+  tituloSnapshot String // RN-036
+  precoSnapshotCentavos Int
+  quantidade     Int
+  subtotalCentavos Int
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  oferta Oferta @relation(fields: [ofertaId], references: [id])
+
+  @@index([pedidoId])
+  @@map("item_pedido")
+}
+
+// ───────────────────────────── Pagamento ───────────────────────────────────
+
+model Pagamento {
+  id          String          @id @default(uuid())
+  pedidoId    String          @unique
+  metodo      MetodoPagamento
+  status      StatusPagamento @default(PENDENTE)
+  gatewayRef  String?
+  splitJson   Json? // Fase 2 (RN-047)
+  pagoEm      DateTime?
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@map("pagamento")
+}
+
+// ───────────────────────────── Comissão ────────────────────────────────────
+
+model Comissao {
+  id                   String         @id @default(uuid())
+  pedidoId             String         @unique
+  mecanicoId           String
+  valorBaseCentavos    Int
+  percentual           Decimal        @db.Decimal(5, 4)
+  valorBrutoCentavos   Int
+  taxaPlataformaCentavos Int          @default(0)
+  valorLiquidoCentavos Int
+  status               StatusComissao @default(PENDENTE) // RN-A20+
+  confirmadaEm         DateTime?
+  liberadaEm           DateTime?
+
+  pedido     Pedido             @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  movimentos MovimentoComissao[]
+
+  @@index([mecanicoId, status])
+  @@map("comissao")
+}
+
+// Auditoria append-only — nunca se edita/apaga (RN-082/A44).
+model MovimentoComissao {
+  id          String                @id @default(uuid())
+  comissaoId  String?
+  saqueId     String?
+  tipo        TipoMovimentoComissao
+  valorCentavos Int
+  descricao   String?
+  criadoEm    DateTime              @default(now())
+
+  comissao Comissao? @relation(fields: [comissaoId], references: [id])
+  saque    Saque?    @relation(fields: [saqueId], references: [id])
+
+  @@index([comissaoId])
+  @@index([saqueId])
+  @@map("movimento_comissao")
+}
+
+model Saque {
+  id          String      @id @default(uuid())
+  mecanicoId  String
+  valorCentavos Int
+  chavePix    String
+  status      StatusSaque @default(SOLICITADO)
+  comprovante String?
+  criadoEm    DateTime    @default(now())
+
+  mecanico   PerfilMecanico      @relation(fields: [mecanicoId], references: [usuarioId])
+  movimentos MovimentoComissao[]
+
+  @@index([mecanicoId])
+  @@map("saque")
+}
+
+// ───────────────────────────── Avaliação ───────────────────────────────────
+
+model Avaliacao {
+  id          String   @id @default(uuid())
+  pedidoId    String   @unique // só quem concluiu pedido (RN-052)
+  autorId     String
+  lojaId      String
+  mecanicoId  String?
+  nota        Int // 1..5
+  comentario  String?
+  respostaLoja String? // RN-053
+  criadoEm    DateTime @default(now())
+
+  pedido Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  autor  Usuario @relation(fields: [autorId], references: [id])
+
+  @@index([lojaId])
+  @@map("avaliacao")
+}
+
+// ───────────────────────────── Atribuição ──────────────────────────────────
+
+// Last-touch com expiração (RN-A01). Entidade própria p/ auditoria.
+model Atribuicao {
+  id         String           @id @default(uuid())
+  clienteId  String
+  mecanicoId String
+  origem     OrigemAtribuicao
+  criadoEm   DateTime         @default(now())
+  expiraEm   DateTime // criadoEm + janela (RN-A01)
+
+  cliente Usuario @relation("AtribuicaoCliente", fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId, expiraEm])
+  @@map("atribuicao")
+}
