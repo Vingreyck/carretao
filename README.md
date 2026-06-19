@@ -2,7 +2,7 @@
 
 > Marketplace hiperlocal de **auto-peças para caminhões**, nascido em **Itabaiana/SE** — com programa de **comissão transparente para mecânicos** embutido.
 >
-> _"Do balcão pra estrada, sem enrolação."_
+> _"Do balcão pra estrada."_
 
 ## O que é
 
