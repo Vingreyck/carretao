@@ -73,6 +73,54 @@ Receita recorrente (MRR)         ≈ R$ 6.360/mês  sem nenhum take rate
 
 Com take rate de 4% na Fase 2 sobre, digamos, R$ 200 mil de GMV/mês = **+R$ 8.000/mês**. A assinatura paga a operação; o take rate é o crescimento.
 
+### Simulação com 10 lojas (preços reais de peças de caminhão)
+
+**Âncoras de preço pesquisadas** (peças de caminhão/linha pesada):
+
+| Peça | Faixa de preço |
+|------|----------------|
+| Filtro (óleo/ar/combustível) | R$ 50 – 120 |
+| Jogo de pastilha de freio (caminhão) | R$ 150 – 400 |
+| Disco de freio (unidade) | R$ 100 – 600 |
+| Bomba d'água | R$ 150 – 400 |
+| Kit de embreagem (ex.: Iveco Stralis) | R$ 2.000 – 4.500 |
+
+> O **ticket médio** do setor de autopeças fica entre **R$ 150** (online) e **R$ 621** (geral). Caminhão puxa pra cima por causa de itens caros. Para a conta, uso um ticket médio **conservador de R$ 300** por pedido.
+
+**Cenários — 10 lojas associadas, ticket médio R$ 300:**
+
+| Cenário | Pedidos/loja/mês | Pedidos totais/mês | GMV total/mês |
+|---------|------------------|--------------------|---------------|
+| Devagar | 25 | 250 | R$ 75.000 |
+| Realista | 60 | 600 | R$ 180.000 |
+| Aquecido | 120 | 1.200 | R$ 360.000 |
+
+**Quanto VOCÊ tira, por modelo de cobrança:**
+
+| Modelo | Devagar | Realista | Aquecido |
+|--------|---------|----------|----------|
+| **Take rate 4%** (sobre GMV) | R$ 3.000 | R$ 7.200 | R$ 14.400 |
+| **Take rate 5%** | R$ 3.750 | R$ 9.000 | R$ 18.000 |
+| **Taxa fixa R$ 1,50/pedido** | R$ 375 | R$ 900 | R$ 1.800 |
+| **Assinatura** (10× Pro R$ 129) | R$ 1.290 | R$ 1.290 | R$ 1.290 |
+
+**Leituras:**
+
+1. Para peça de caminhão (ticket alto), a **comissão percentual rende muito mais** que a taxa fixa por pedido — R$ 7.200 vs R$ 900 no cenário realista. Se um dia cobrar comissão, vá de **%**.
+2. **No início, com pouco volume, a assinatura (R$ 1.290/mês fixos) é o que te sustenta** — a comissão só fica gorda quando o volume cresce. Por isso ela é a receita principal do MVP.
+3. Combinando (Fase 2): assinatura **R$ 1.290** + take rate 4% no realista **R$ 7.200** ≈ **R$ 8.490/mês** com só 10 lojas.
+
+**Quem ganha o quê num pedido de R$ 300 (Fase 2, take 4%, comissão do mecânico 5%):**
+
+```
+Cliente paga ............. R$ 300,00
+  → Mecânico (5%, pago pela loja) .... R$ 15,00
+  → Carretão (take 4%, pago pela loja) R$ 12,00   ← você
+  → Loja fica com .................... R$ 273,00   (antes do custo da peça)
+```
+
+> No **MVP**, o take rate é **0%**: nesse mesmo pedido você ganha **R$ 0** por venda e fatura só na **mensalidade**. O take rate entra na Fase 2, com pagamento dentro do app.
+
 ---
 
 ## Benchmark de mercado (pesquisa)
