@@ -14,6 +14,7 @@ Entrega no estilo do querodelivery: **landing institucional** que apresenta o ap
 
 A definição de produto e regras de negócio vive em [`/docs`](./docs). **Comece por [`docs/README.md`](./docs/README.md).**
 
+
 | Doc | Assunto |
 |-----|---------|
 | [01 — Visão Geral](./docs/01-visao-geral.md) | O que é, problema, solução, diferencial |
