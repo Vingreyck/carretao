@@ -1,2 +1,2 @@
-# carret-o
-marketplacecde auto-peças voltada para caminhões
+# carretao
+marketplace de auto-peças voltada para caminhões
