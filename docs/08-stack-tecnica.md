@@ -54,4 +54,7 @@ carretao/
 > Anote aqui decisões relevantes, com data e motivo. Formato: `AAAA-MM-DD — Decisão — Motivo`.
 
 - **2026-06-19 — Documentação de negócio antes de código (Parte 0).** Motivo: o Vin pediu regras de negócio bem definidas e documentadas como fundação; reduz retrabalho.
+- **2026-06-19 — Regras de domínio puras em `@carretao/core`, fora do framework.** Motivo: cálculo de comissão e máquinas de estado (RN-037, RN-A20+) precisam ser testáveis e reusáveis por API, web e mobile sem acoplar a NestJS. 38 testes cobrindo as regras.
+- **2026-06-19 — Dinheiro em centavos (Int); percentual em Decimal(5,4).** Motivo: evitar erro de ponto flutuante em valores financeiros; imutabilidade via snapshots (RN-036).
+- **2026-06-19 — PrismaService conecta de forma preguiçosa (sem `$connect` no boot).** Motivo: a API sobe mesmo sem banco, permitindo testar endpoints de domínio; o health-check reporta a disponibilidade do banco.
 - _(próximas decisões aqui)_
