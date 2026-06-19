@@ -1,0 +1,39 @@
+/* Tokens de marca do Carretão como variáveis CSS.
+   Importe este arquivo na raiz do app (web) para usar var(--cor-estrada) etc. */
+:root {
+  /* Cores */
+  --cor-estrada: #f26a1b;
+  --cor-estrada-escuro: #d2530b;
+  --cor-estrada-claro: #ffe2cf;
+  --cor-asfalto: #1b2a4a;
+  --cor-sol-do-sertao: #ffc400;
+  --cor-fundo: #f7f7f5;
+  --cor-superficie: #ffffff;
+  --cor-texto: #1b2a4a;
+  --cor-texto-suave: #5b6472;
+  --cor-borda: #e3e3df;
+  --cor-sucesso: #1e9e5a;
+  --cor-alerta: #e03e3e;
+  --cor-aviso: #e8a100;
+
+  /* Tipografia */
+  --fonte-titulo: "Baloo 2", "Nunito", system-ui, sans-serif;
+  --fonte-corpo: "Nunito", system-ui, -apple-system, sans-serif;
+
+  /* Raios */
+  --raio-sm: 8px;
+  --raio-md: 14px;
+  --raio-lg: 22px;
+  --raio-pill: 999px;
+
+  /* Espaçamentos */
+  --esp-xs: 4px;
+  --esp-sm: 8px;
+  --esp-md: 16px;
+  --esp-lg: 24px;
+  --esp-xl: 32px;
+
+  /* Sombras */
+  --sombra-card: 0 2px 10px rgba(27, 42, 74, 0.08);
+  --sombra-flutuante: 0 8px 24px rgba(27, 42, 74, 0.16);
+}

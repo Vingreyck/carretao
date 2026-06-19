@@ -31,6 +31,7 @@ Esta pasta concentra toda a definição de produto e de negócio do Carretão. A
 | 0 | Documentação de regras de negócio + identidade | ✅ Pronto |
 | 1 | Landing institucional (estilo querodelivery) | ⬜ A fazer |
 | 2 | Backend + modelo de dados | 🟡 Em andamento (core testado + schema + esqueleto API) |
+| — | Design system em código (`packages/ui`) para o Claude Design (`/design-sync`) | ✅ Pronto |
 | 3 | Web app marketplace | ⬜ A fazer |
 | 4 | Painel do lojista | ⬜ A fazer |
 | 5 | Painel/app do mecânico (afiliado) | ⬜ A fazer |
